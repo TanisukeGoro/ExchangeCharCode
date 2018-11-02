@@ -4,11 +4,13 @@
 # 変換コード ; 指定したコードに変換する。
 # 拡張子指定 ; 指定した拡張子のファイル を探索する。
 # PreCharCode="utf-8"; ExChageCharCode="SJIS"; Ext="*.TXT"
-PreCharCode="SJIS"; ExChageCharCode="utf-8"; Ext="*.TXT"
+PreCharCode="SJIS"; ExChageCharCode="utf-8";
+Ext="*.TXT";
 
 # SJISなら--mineの判定が "unknown-8bit" となるので対応が必要
 if [[ $PreCharCode=="SJIS" ]]; then mode=1;fi
 # 引数があるかないか
+# 引数としてフォルダはいくらでも受け取れる
 [ $# != 0 ] && echo "arglen is True" || exit 0
 # フォルダが存在するかしないか
 for i in "$@"; do
@@ -18,18 +20,38 @@ for i in "$@"; do
   echo $i > arg$COUNT.txt
   #拡張子は大文字小文字で区別される   list->ファイル フルパス, FileN-> ベース名
   list=$(find $i -name $Ext) && FileN=($(find $i -name $Ext | awk -F/ '{print $NF}'))
+
   #ファイル名出力
   for FN in ${FileN[@]}; do echo $FN >> arg$COUNT.txt; done
   #文字コード検索
   for FPath in ${list[@]}; do
     CCode=$(file --mime $FPath)
     Fbase=$(basename $FPath)
-    if [[ ($mode -eq 1) && (${CCode##*=} == "unknown-8bit") ]]; then iconv -f $PreCharCode -t $ExChageCharCode $FPath > $FPath.ex　&& printf "\e[32m$Fbase\e[m \t-> ${CCode##*=} ->\e[34m OK \e[m\n"
-    elif [[ (${CCode##*=} == $PreCharCode) ]]; then iconv -f $PreCharCode -t $ExChageCharCode $FPath > $FPath.csv&& printf "\e[32m$Fbase\e[m \t-> ${CCode##*=} ->\e[34m OK \e[m\n"
-    else printf "\e[32m$Fbase\e[m \t-> ${CCode##*=} ->\e[31m NG \e[m\n"
+
+    if [[ ($mode -eq 1) && (${CCode##*=} == "unknown-8bit") ]]; then
+      (( COUNT_rep++ ))
+      if [[ $COUNT_rep == 1 ]]; then
+        #初回のみディレクトリ作成。既にあればエラーメッセージ
+        mkdir $1/Exhage_data
+      fi
+
+      # 作成したフォルダにファイルを変換して出力(SJIS)
+      iconv -f $PreCharCode -t $ExChageCharCode $FPath > $1/Exhage_data/$Fbase
+      printf "\e[32m$Fbase\e[m \t-> ${CCode##*=} ->\e[34m OK \e[m\n"
+
+      # 作成したフォルダにファイルを変換して出力(その他の文字コード)
+      # 本当はSJISと同じところで処理をしたいけど、ifの条件式が長いため分けた。
+    elif [[ (${CCode##*=} == $PreCharCode) ]]; then
+      iconv -f $PreCharCode -t $ExChageCharCode $FPath > $1/Exhage_data/$Fbase
+      printf "\e[32m$Fbase\e[m \t-> ${CCode##*=} ->\e[34m OK \e[m\n"
+
+    else
+      printf "\e[32m$Fbase\e[m \t-> ${CCode##*=} ->\e[31m NG \e[m\n"
     fi
+    
   done
 done
+
 # echo "${#FileN[@]} Files is compleate !!"
 
 # 文字コードの判定には file -bを使ってもいいのかもしれない？？
