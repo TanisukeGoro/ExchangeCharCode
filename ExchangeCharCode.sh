@@ -19,7 +19,7 @@ for i in "$@"; do
   [ -e $i ] && printf "arg[$COUNT]:\e[33m${i}\e[m\n" || exit 0
   echo $i > arg$COUNT.txt
   #拡張子は大文字小文字で区別される   list->ファイル フルパス, FileN-> ベース名
-  list=$(find $i -name $Ext) && FileN=($(find $i -name $Ext | awk -F/ '{print $NF}'))
+  list=$(find $i -maxdepth 1 -name $Ext) && FileN=($(find $i -name $Ext | awk -F/ '{print $NF}'))
 
   #ファイル名出力
   for FN in ${FileN[@]}; do echo $FN >> arg$COUNT.txt; done
@@ -27,6 +27,12 @@ for i in "$@"; do
   for FPath in ${list[@]}; do
     CCode=$(file --mime $FPath)
     Fbase=$(basename $FPath)
+
+    # 隠しファイルは無視
+    if [[ $Fbase =~ ^\._.* ]]; then
+      printf "\e[35m$Fbase\e[m \t-> \e[31m SKIPP \e[m\n"
+      continue
+    fi
 
     if [[ ($mode -eq 1) && (${CCode##*=} == "unknown-8bit") ]]; then
       (( COUNT_rep++ ))
@@ -36,19 +42,24 @@ for i in "$@"; do
       fi
 
       # 作成したフォルダにファイルを変換して出力(SJIS)
-      iconv -f $PreCharCode -t $ExChageCharCode $FPath > $1/Exhage_data/$Fbase
+      iconv -f $PreCharCode -t $ExChageCharCode $FPath > $i/Exhage_data/$Fbase
       printf "\e[32m$Fbase\e[m \t-> ${CCode##*=} ->\e[34m OK \e[m\n"
 
       # 作成したフォルダにファイルを変換して出力(その他の文字コード)
       # 本当はSJISと同じところで処理をしたいけど、ifの条件式が長いため分けた。
     elif [[ (${CCode##*=} == $PreCharCode) ]]; then
-      iconv -f $PreCharCode -t $ExChageCharCode $FPath > $1/Exhage_data/$Fbase
+      (( COUNT_rep++ ))
+      if [[ $COUNT_rep == 1 ]]; then
+        #初回のみディレクトリ作成。既にあればエラーメッセージ
+        mkdir $1/Exhage_data
+      fi
+      iconv -f $PreCharCode -t $ExChageCharCode $FPath > $i/Exhage_data/$Fbase
       printf "\e[32m$Fbase\e[m \t-> ${CCode##*=} ->\e[34m OK \e[m\n"
 
     else
       printf "\e[32m$Fbase\e[m \t-> ${CCode##*=} ->\e[31m NG \e[m\n"
     fi
-    
+
   done
 done
 
