@@ -3,8 +3,8 @@
 # 探索コード ; 指定したコードのファイル を探索する。
 # 変換コード ; 指定したコードに変換する。
 # 拡張子指定 ; 指定した拡張子のファイル を探索する。
-PreCharCode="utf-8"; ExChageCharCode="SJIS"; Ext="*.TXT"
-# PreCharCode="SJIS"; ExChageCharCode="utf-8";
+# PreCharCode="utf-8"; ExChageCharCode="SJIS"; Ext="*.TXT"
+PreCharCode="SJIS"; ExChageCharCode="utf-8";
 Ext="*.TXT";
 
 # SJISなら--mineの判定が "unknown-8bit" となるので対応が必要
@@ -19,8 +19,8 @@ for i in "$@"; do
   [ -e $i ] && printf "arg[$COUNT]:\e[33m${i}\e[m\n" || exit 0
   echo $i > arg$COUNT.txt
   #拡張子は大文字小文字で区別される   list->ファイル フルパス, FileN-> ベース名
-  list=$(find $i -name $Ext) && FileN=($(find $i -name $Ext | awk -F/ '{print $NF}'))
-  mkdir $i/Exhage_data
+  list=$(find $i -maxdepth 1 -name $Ext) && FileN=($(find $i -name $Ext | awk -F/ '{print $NF}'))
+
   #ファイル名出力
   for FN in ${FileN[@]}; do echo $FN >> arg$COUNT.txt; done
   #文字コード検索
@@ -35,6 +35,12 @@ for i in "$@"; do
     fi
 
     if [[ ($mode -eq 1) && (${CCode##*=} == "unknown-8bit") ]]; then
+      (( COUNT_rep++ ))
+      if [[ $COUNT_rep == 1 ]]; then
+        #初回のみディレクトリ作成。既にあればエラーメッセージ
+        mkdir $1/Exhage_data
+      fi
+
       # 作成したフォルダにファイルを変換して出力(SJIS)
       iconv -f $PreCharCode -t $ExChageCharCode $FPath > $i/Exhage_data/$Fbase
       printf "\e[32m$Fbase\e[m \t-> ${CCode##*=} ->\e[34m OK \e[m\n"
