@@ -48,6 +48,11 @@ for i in "$@"; do
       # 作成したフォルダにファイルを変換して出力(その他の文字コード)
       # 本当はSJISと同じところで処理をしたいけど、ifの条件式が長いため分けた。
     elif [[ (${CCode##*=} == $PreCharCode) ]]; then
+      (( COUNT_rep++ ))
+      if [[ $COUNT_rep == 1 ]]; then
+        #初回のみディレクトリ作成。既にあればエラーメッセージ
+        mkdir $1/Exhage_data
+      fi
       iconv -f $PreCharCode -t $ExChageCharCode $FPath > $i/Exhage_data/$Fbase
       printf "\e[32m$Fbase\e[m \t-> ${CCode##*=} ->\e[34m OK \e[m\n"
 
