@@ -21,6 +21,7 @@ for i in "$@"; do
   #拡張子は大文字小文字で区別される   list->ファイル フルパス, FileN-> ベース名
   list=$(find $i -maxdepth 1 -name $Ext) && FileN=($(find $i -name $Ext | awk -F/ '{print $NF}'))
 
+  COUNT_rep=0
   #ファイル名出力
   for FN in ${FileN[@]}; do echo $FN >> arg$COUNT.txt; done
   #文字コード検索
@@ -38,7 +39,7 @@ for i in "$@"; do
       (( COUNT_rep++ ))
       if [[ $COUNT_rep == 1 ]]; then
         #初回のみディレクトリ作成。既にあればエラーメッセージ
-        mkdir $1/Exhage_data
+        mkdir $i/Exhage_data
       fi
 
       # 作成したフォルダにファイルを変換して出力(SJIS)
