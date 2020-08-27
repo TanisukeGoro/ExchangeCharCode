@@ -11,7 +11,7 @@ while getopts re: OPT
 do
   case $OPT in
     "r" ) REPLACE="TRUE" ;;
-    "e" ) EXT="TRUE" ; Ext="*.${OPTARG}" ;;
+    "e" ) EXT_FLAG="TRUE" ; Ext="*.${OPTARG}" ;;
       * ) echo "Usage: $CMDNAME [-r : replace exchange file] [-e VALUE : exchange file extension]" 1>&2
           exit 1 ;;
   esac
@@ -21,7 +21,7 @@ done
 if [ "$REPLACE" = "TRUE" ]; then
   printf "\e[34m === Replace Original File === \e[m\n"
 fi
-if [ "$EXT" = "TRUE" ]; then
+if [ "$EXT_FLAG" = "TRUE" ]; then
   # $Ext=$EXT_Val
   printf "\e[34m Option Extension: ${Ext} \e[m\n"
 fi
@@ -33,12 +33,12 @@ if [[ $PreCharCode=="SJIS" ]]; then mode=1;fi
 [ $# != 0 ] && echo "arglen is True" || exit 0
 # フォルダが存在するかしないか
 for i in "$@"; do
-  (( COUNT++ ))
   #\e[31mで文字色変更, \e[m\nでリセット
-  [ -e $i ] && printf "arg[$COUNT]:\e[33m${i}\e[m\n" || continue
-  echo $i > arg$COUNT.txt
+  [ -e $i ] || continue
+  (( COUNT++ )) 
+  echo $i > arg$COUNT.txt
   #拡張子は大文字小文字で区別される   list->ファイル フルパス, FileN-> ベース名
-  list=$(find $i -maxdepth 1 -name $Ext) && FileN=($(find $i -name $Ext | awk -F/ '{print $NF}'))
+  list=$(find $i -maxdepth 1 -name "$Ext") && FileN=($(find $i -name "$Ext" | awk -F/ '{print $NF}'))
 
   COUNT_rep=0
   #ファイル名出力
@@ -64,7 +64,10 @@ for i in "$@"; do
     if [[ ($mode -eq 1) && (${CCode##*=} == "unknown-8bit") ]]; then
       # 作成したフォルダにファイルを変換して出力(SJIS)
       if [ "$REPLACE" = "TRUE" ]; then
-        iconv -f $PreCharCode -t $ExChageCharCode $FPath > $i/$Fbase
+        mv $FPath ${i}/~${Fbase}
+        iconv -f $PreCharCode -t $ExChageCharCode "${i}/~${Fbase}" > $FPath
+        rm ${i}/~${Fbase}
+
       else
         iconv -f $PreCharCode -t $ExChageCharCode $FPath > $i/Exhage_data/$Fbase
       fi
