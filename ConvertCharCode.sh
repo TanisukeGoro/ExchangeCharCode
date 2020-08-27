@@ -6,6 +6,25 @@
 # PreCharCode="utf-8"; ExChageCharCode="SJIS"; Ext="*.TXT"
 PreCharCode="SJIS"; ExChageCharCode="utf-8";
 Ext="*.TXT";
+REPLACE="FALSE"
+while getopts re: OPT
+do
+  case $OPT in
+    "r" ) REPLACE="TRUE" ;;
+    "e" ) EXT="TRUE" ; Ext="*.${OPTARG}" ;;
+      * ) echo "Usage: $CMDNAME [-r : replace exchange file] [-e VALUE : exchange file extension]" 1>&2
+          exit 1 ;;
+  esac
+done
+
+# 引数処理
+if [ "$REPLACE" = "TRUE" ]; then
+  printf "\e[34m === Replace Original File === \e[m\n"
+fi
+if [ "$EXT" = "TRUE" ]; then
+  # $Ext=$EXT_Val
+  printf "\e[34m Option Extension: ${Ext} \e[m\n"
+fi
 
 # SJISなら--mineの判定が "unknown-8bit" となるので対応が必要
 if [[ $PreCharCode=="SJIS" ]]; then mode=1;fi
@@ -16,7 +35,7 @@ if [[ $PreCharCode=="SJIS" ]]; then mode=1;fi
 for i in "$@"; do
   (( COUNT++ ))
   #\e[31mで文字色変更, \e[m\nでリセット
-  [ -e $i ] && printf "arg[$COUNT]:\e[33m${i}\e[m\n" || exit 0
+  [ -e $i ] && printf "arg[$COUNT]:\e[33m${i}\e[m\n" || continue
   echo $i > arg$COUNT.txt
   #拡張子は大文字小文字で区別される   list->ファイル フルパス, FileN-> ベース名
   list=$(find $i -maxdepth 1 -name $Ext) && FileN=($(find $i -name $Ext | awk -F/ '{print $NF}'))
@@ -35,26 +54,30 @@ for i in "$@"; do
       continue
     fi
 
-    if [[ ($mode -eq 1) && (${CCode##*=} == "unknown-8bit") ]]; then
-      (( COUNT_rep++ ))
-      if [[ $COUNT_rep == 1 ]]; then
-        #初回のみディレクトリ作成。既にあればエラーメッセージ
-        mkdir $i/Exhage_data
-      fi
+    (( COUNT_rep++ ))
+    if [ $COUNT_rep == 1 -a $REPLACE != "TRUE" ]; then
+      #初回のみディレクトリ作成。既にあればエラーメッセージ
+      mkdir $i/Exhage_data
+    fi
 
+    # 実験装置から出力される文字コードが特殊なので雑に分岐
+    if [[ ($mode -eq 1) && (${CCode##*=} == "unknown-8bit") ]]; then
       # 作成したフォルダにファイルを変換して出力(SJIS)
-      iconv -f $PreCharCode -t $ExChageCharCode $FPath > $i/Exhage_data/$Fbase
+      if [ "$REPLACE" = "TRUE" ]; then
+        iconv -f $PreCharCode -t $ExChageCharCode $FPath > $i/$Fbase
+      else
+        iconv -f $PreCharCode -t $ExChageCharCode $FPath > $i/Exhage_data/$Fbase
+      fi
       printf "\e[32m$Fbase\e[m \t-> ${CCode##*=} ->\e[34m OK \e[m\n"
 
       # 作成したフォルダにファイルを変換して出力(その他の文字コード)
       # 本当はSJISと同じところで処理をしたいけど、ifの条件式が長いため分けた。
     elif [[ (${CCode##*=} == $PreCharCode) ]]; then
-      (( COUNT_rep++ ))
-      if [[ $COUNT_rep == 1 ]]; then
-        #初回のみディレクトリ作成。既にあればエラーメッセージ
-        mkdir $1/Exhage_data
+      if [ "$REPLACE" = "TRUE" ]; then
+        iconv -f $PreCharCode -t $ExChageCharCode $FPath > $i/$Fbase
+      else
+        iconv -f $PreCharCode -t $ExChageCharCode $FPath > $i/Exhage_data/$Fbase
       fi
-      iconv -f $PreCharCode -t $ExChageCharCode $FPath > $i/Exhage_data/$Fbase
       printf "\e[32m$Fbase\e[m \t-> ${CCode##*=} ->\e[34m OK \e[m\n"
 
     else
